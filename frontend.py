@@ -15,13 +15,30 @@ except LookupError:
 # Load environment variables
 load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Add this line
 PINECONE_INDEX_NAME = "medical"
 
 # Streamlit page setup
 st.set_page_config(page_title="Medical-Bot", layout="wide")
 st.title("🩺 Medical-Bot - AI-powered Medical Assistant")
 
-# Sidebar - Data Source Selection
+# Verify API keys
+if not GROQ_API_KEY:
+    st.error("⚠️ Groq API key not found. Please add GROQ_API_KEY to your .env file.")
+    st.stop()
+
+if not PINECONE_API_KEY:
+    st.error("⚠️ Pinecone API key not found. Please add PINECONE_API_KEY to your .env file.")
+    st.stop()
+
+# Model selection in sidebar
+st.sidebar.header("Model Settings")
+model_choice = st.sidebar.selectbox(
+    "Select Groq Model:",
+    ["mixtral-8x7b-32768", "llama2-70b-4096"]
+)
+
+# Data Source Selection
 st.sidebar.header("Data Source Selection")
 data_source = st.sidebar.radio("Choose data source:", ["Upload a PDF", "Enter a URL", "Use Default Data"])
 
@@ -71,7 +88,7 @@ question = st.text_area("Type your query below:")
 if st.button("💬 Submit Query") and question:
     with st.spinner("🤔 Generating response... Please wait!"):
         try:
-            response = query_chatbot(question)
+            response = query_chatbot(question, model=model_choice)
             st.session_state.queries.append((question, response))
         except Exception as e:
             st.error(f"❌ Error generating response: {str(e)}")
@@ -86,4 +103,4 @@ for idx, (q, r) in enumerate(st.session_state.queries):
 
 # Footer
 st.markdown("---")
-st.markdown("🔍 **Medical-Bot** - AI-powered assistant for medical information. 💡")
+st.markdown("🔍 **Medical-Bot** - AI-powered assistant for medical information powered by Groq 💡")
