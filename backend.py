@@ -6,15 +6,18 @@ from langchain_community.vectorstores import Pinecone as PineconeVectorStore
 from langchain_community.document_loaders import PyPDFLoader, OnlinePDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.llms import Ollama
+from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
-from bs4 import BeautifulSoup # type: ignore
+from bs4 import BeautifulSoup
 from langchain.chains import RetrievalQA
+import nltk
 
+nltk.download('averaged_perceptron_tagger')
 
 # Load environment variables
 load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Add this to your .env file
 PINECONE_INDEX_NAME = "medical"
 
 # Initialize Pinecone client
@@ -75,7 +78,7 @@ def store_embeddings(input_path):
     )
     return "✅ Data successfully processed and stored in Pinecone."
 
-def query_chatbot(question, model="llama2"):
+def query_chatbot(question, model="mixtral-8x7b-32768"):
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     
     try:
@@ -87,12 +90,20 @@ def query_chatbot(question, model="llama2"):
     except Exception:
         retriever = None
     
-    llm = Ollama(model="llama2")
+    # Initialize Groq LLM
+    llm = ChatGroq(
+        temperature=0.7,
+        groq_api_key=GROQ_API_KEY,
+        model_name=model  # Using Mixtral 8x7B model
+    )
     
     prompt_template = """
-    If you don't know the answer, just say that you don't know the answer, but don't make up an answer.
+    You are a knowledgeable medical assistant. Use the provided context to answer the question accurately and professionally.
+    If you don't know the answer or if the information isn't in the context, just say that you don't know.
+    
     Context: {context}
     Question: {question}
+    
     Helpful answer:
     """
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
